@@ -506,39 +506,33 @@ class ServerCallbacks : public BLEServerCallbacks {
 //   Key vật lý gửi "1" → LOCK, "2" → UNLOCK, "3" → TRUNK
 class CmdWriteCallbacks : public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic *pChar) override {
-        std::string val = pChar->getValue();
-        if (val.empty()) {
-            Serial.println("[BLE] WRITE received but empty!");
-            return;
-        }
+    std::string val = pChar->getValue();
 
-        // Parse chuỗi ASCII → số nguyên: "10" → 10, "11" → 11
-        int cmd = atoi(val.c_str());
-
-        switch (cmd) {
-            // ── Phone App ───────────────────────────────────
-            case 10:  // APP: OFF → tắt nguồn
-                gLastKeyCommand      = KEY_LOCK;
-                gKeyCommandProcessed = false;
-                // Serial.println("[BLE] CMD: APP OFF (10) → KEY_LOCK");
-                Serial.println("KEY||LOCK");
-                delay(20);
-                break;
-            case 11:  // APP: ON → bật ACC
-                gLastKeyCommand      = KEY_UNLOCK;
-                gKeyCommandProcessed = false;
-                // Serial.println("[BLE] CMD: APP ON (11) → KEY_UNLOCK");
-                Serial.println("KEY||UNLOCK");
-                delay(20);
-                break;
-            default:
-                Serial.print("[BLE] UNKNOWN CMD: ");
-                Serial.println(cmd);
-                break;
-        }
-        delay(10);
-        Serial.flush();
+    if (val.empty()) {
+        Serial.println("[BLE] WRITE received but empty!");
+        return;
     }
+
+    // ── IGN START/STOP ───────────────────────────────
+    if (val == "START||ON") {   // Phone send UNLOCK
+        gLastKeyCommand      = KEY_UNLOCK;
+        gKeyCommandProcessed = false;
+        Serial.println("KEY||UNLOCK");
+    }
+    else if (val == "STOP||OFF") {   // Phone send LOCK
+        gLastKeyCommand      = KEY_LOCK;
+        gKeyCommandProcessed = false;
+        Serial.println("KEY||LOCK");
+    }
+
+    // ── Doors ───────────────────────────────────────
+    else {
+        Serial.println(val.c_str());
+    }
+
+    delay(20);
+    Serial.flush();
+}
 };
 
 // Khởi tạo BLE Server
@@ -552,8 +546,8 @@ void initBleServer()
 
     // Tạo Service
     BLEService *service = bleServer->createService(SERVICE_UUID);
-    Serial.print("[BLE] Service UUID: ");
-    Serial.println(SERVICE_UUID);
+    //Serial.print("[BLE] Service UUID: ");
+    //Serial.println(SERVICE_UUID);
 
     // Tạo Characteristic với WRITE + WRITE_NO_RESPONSE
     bleCharCmd = service->createCharacteristic(
@@ -563,8 +557,8 @@ void initBleServer()
     );
     bleCharCmd->setCallbacks(new CmdWriteCallbacks());
     bleCharCmd->addDescriptor(new BLE2902());
-    Serial.print("[BLE] Char UUID: ");
-    Serial.println(CHAR_UUID_CMD);
+    //Serial.print("[BLE] Char UUID: ");
+    //Serial.println(CHAR_UUID_CMD);
 
     service->start();
 
