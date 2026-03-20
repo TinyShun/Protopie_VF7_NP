@@ -19,7 +19,7 @@ CanTxTask txTasks[] = {
   },
   //VCU_HV_Status  ID:0x269  Cycle:40ms
   {
-    {0x269, false, CANFDMessage::CAN_DATA, 0, 8,
+    {0x269, false, CANFDMessage::CAN_DATA, 0, 2,
      {0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
     40, 0, false, false
   },

@@ -189,14 +189,14 @@ void handleAdcPedals()
 
     // Print only if change >= threshold
     if (abs((int)brakePercent - (int)prevBrakePercent) >= PEDAL_PRINT_THRESHOLD) {
-        //Serial.print("BRAKE_PERCENT||");
-        //Serial.println(brakePercent);
+        Serial.print("BRAKE_PERCENT||");
+        Serial.println(brakePercent);
         prevBrakePercent = brakePercent;
     }
 
     if (abs((int)gasPercent - (int)prevGasPercent) >= PEDAL_PRINT_THRESHOLD) {
-        //Serial.print("GAS_PERCENT||");
-        //Serial.println(gasPercent);
+        Serial.print("GAS_PERCENT||");
+        Serial.println(gasPercent);
         prevGasPercent = gasPercent;
     }
 }
@@ -253,7 +253,13 @@ void handlePhysicalKey()
                 if (gKeyCommandProcessed) {
                     gLastKeyCommand      = KEY_LOCK;
                     gKeyCommandProcessed = false;
+                    gIgnState = IGN_OFF;  // LOCK luôn về OFF
+                    setIgnStateToCan(IGN_OFF);
                     Serial.println("KEY||LOCK");
+                    // Auto shift to Gear P when locking
+                    txTasks[TX_VCU_HV_DRVSYS_STATUS].canMess.data[4] = 0x00;  // Gear P
+                    gGearMapped = 0x00;
+                    delay(10);
                     delay(20);
                     Serial.flush();
                 }
@@ -274,6 +280,8 @@ void handlePhysicalKey()
                 if (gKeyCommandProcessed) {
                     gLastKeyCommand      = KEY_UNLOCK;
                     gKeyCommandProcessed = false;
+                    gIgnState = IGN_ACC;  // UNLOCK chuyển về ACC
+                    setIgnStateToCan(IGN_ACC);
                     Serial.println("KEY||UNLOCK");
                     delay(20);
                     Serial.flush();
@@ -299,6 +307,7 @@ void handleKeyAction()
                     gIgnState = IGN_ACC;
                     setIgnStateToCan(IGN_ACC);
                     Serial.println("IGN||ACC");
+                    Serial1.println("IGN||ACC");
                     delay(20);
                     Serial.flush();
                 }
@@ -315,8 +324,10 @@ void handleKeyAction()
                     gGearMapped = 0x00;
                     delay(10);
                     Serial.println("GEAR||P");
+                    Serial1.println("GEAR||0");
                     delay(20);
                     Serial.println("IGN||OFF");
+                    Serial1.println("IGN||OFF");
                     delay(20);
                     Serial.flush();
                 }
@@ -332,7 +343,11 @@ void handleKeyAction()
     if (gIgnState == IGN_ACC && brakePressed()) {
         gIgnState = IGN_ON;
         setIgnStateToCan(IGN_ON);
+        delay(20);
         Serial.println("IGN||ON");
+        Serial1.println("IGN||ON");
+        delay(20);
+        Serial1.println("pedals_brake");
         delay(20);
         Serial.flush();
     }
@@ -488,14 +503,14 @@ void handleTurnStateMachine(const uLIN_MSG& msg)
 class ServerCallbacks : public BLEServerCallbacks {
     void onConnect(BLEServer *pServer) override {
         bleConnected = true;
-        Serial.println("[BLE] ✓ PHONE CONNECTED");
-        Serial.println("[BLE] Waiting for command...");
+        //Serial.println("[BLE] ✓ PHONE CONNECTED");
+        //Serial.println("[BLE] Waiting for command...");
     }
     void onDisconnect(BLEServer *pServer) override {
         bleConnected    = false;
         bleWasConnected = true;  // trigger restart advertising ở loop()
-        Serial.println("[BLE] ✗ PHONE DISCONNECTED");
-        Serial.println("[BLE] Restarting advertising...");
+        //Serial.println("[BLE] ✗ PHONE DISCONNECTED");
+        //Serial.println("[BLE] Restarting advertising...");
     }
 };
 
@@ -509,23 +524,28 @@ class CmdWriteCallbacks : public BLECharacteristicCallbacks {
     std::string val = pChar->getValue();
 
     if (val.empty()) {
-        Serial.println("[BLE] WRITE received but empty!");
+        //Serial.println("[BLE] WRITE received but empty!");
         return;
     }
 
     // ── IGN START/STOP ───────────────────────────────
-    if (val == "START||ON") {   // Phone send UNLOCK
+    if (val == "3D_API||START_ON") {   // Phone send UNLOCK
         gLastKeyCommand      = KEY_UNLOCK;
         gKeyCommandProcessed = false;
+        gIgnState = IGN_ACC;  // UNLOCK chuyển về ACC
+        setIgnStateToCan(IGN_ACC);
         Serial.println("KEY||UNLOCK");
+        Serial1.println("IGN||ACC");
     }
-    else if (val == "STOP||OFF") {   // Phone send LOCK
+    else if (val == "3D_API||STOP_OFF") {   // Phone send LOCK
         gLastKeyCommand      = KEY_LOCK;
         gKeyCommandProcessed = false;
+        gIgnState = IGN_OFF;  // LOCK luôn về OFF
+        setIgnStateToCan(IGN_OFF);
         Serial.println("KEY||LOCK");
+        Serial1.println("IGN||OFF");
     }
 
-    // ── Doors ───────────────────────────────────────
     else {
         Serial.println(val.c_str());
     }
@@ -580,6 +600,7 @@ void handleUart1Debug()
         prevGear = gGearMapped;
         Serial1.print("GEAR||");
         Serial1.println(gGearMapped);
+        delay(20);
         Serial1.flush();
     }
 }
@@ -617,6 +638,8 @@ void handleSpeed()
         }
     }
 }
+
+// Handle auto auto start
 
 // ── SETUP ────────────────────────────────────────────────────────────
 

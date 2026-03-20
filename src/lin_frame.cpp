@@ -2,8 +2,6 @@
 
 // static uint8_t mfsLeftCam, mfsLeftFav, mfsLeftLeft, mfsLeftRight, mfsLever, mfsLeverButton;           // MFS Left
 // static uint8_t mfsRightVoice, mfsRightMenu, mfsRightLeft, mfsRightRight, mfsScroll, mfsScrollButton;  // MFS Right
-
-static uint8_t Left_Stalk_Up, Left_Stalk_Down, Left_Stalk_Inward, Left_Stalk_Outward;
 // const MfsSignal leftSignals[] = {
 //   { 0, 0, "mfs_l_lever"},
 //   { 0, 4, "mfs_l_lever_button"},
